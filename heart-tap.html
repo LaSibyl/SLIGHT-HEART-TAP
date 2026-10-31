@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>心率点按记录</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f3;
+    --surface: #ffffff;
+    --ink: #1c2430;
+    --muted: #5d6875;
+    --line: #d3dade;
+    --pulse: #c8323c;
+    --pulse-soft: rgba(200, 50, 60, 0.14);
+    --ok: #2f7a5b;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151b22;
+      --surface: #1d252e;
+      --ink: #e6ecf0;
+      --muted: #94a1ad;
+      --line: #2e3a46;
+      --pulse: #ff5a63;
+      --pulse-soft: rgba(255, 90, 99, 0.18);
+      --ok: #5cc296;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151b22; --surface: #1d252e; --ink: #e6ecf0; --muted: #94a1ad;
+    --line: #2e3a46; --pulse: #ff5a63; --pulse-soft: rgba(255, 90, 99, 0.18);
+    --ok: #5cc296; color-scheme: dark;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Manrope", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 20px 48px; }
+
+  header {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  h1 { font-size: 1.15rem; font-weight: 800; margin: 0; }
+  .durations { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.9rem; }
+  .durations button {
+    font: inherit; color: var(--ink); background: transparent;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 12px; cursor: pointer;
+  }
+  .durations button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .durations button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
+
+  .stage {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px 24px 28px;
+    text-align: center;
+  }
+  .clock {
+    font-size: clamp(3.4rem, 15vw, 6.5rem);
+    font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+  }
+  .clock .cs { font-size: 0.45em; color: var(--muted); font-weight: 600; }
+  .of { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+
+  .progress { height: 6px; background: var(--line); border-radius: 3px; margin: 22px 0 28px; overflow: hidden; }
+  .progress > div { height: 100%; width: 0; background: var(--pulse); }
+
+  .beat-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .dot {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--pulse-soft); border: 2px solid var(--pulse);
+    transition: background 180ms ease-out, transform 180ms ease-out;
+  }
+  .dot.hit { background: var(--pulse); transform: scale(1.12); transition: none; }
+  .count { font-size: 3rem; font-weight: 800; line-height: 1; }
+  .count-label { color: var(--muted); font-size: 0.9rem; text-align: left; }
+
+  .hint { margin: 26px 0 0; color: var(--muted); }
+  .hint kbd {
+    font: inherit; font-weight: 600; color: var(--ink);
+    border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 6px; padding: 0 6px;
+  }
+
+  .result { margin-top: 20px; display: none; }
+  .result.show { display: block; }
+  .bpm { font-size: 2.6rem; font-weight: 800; color: var(--ok); line-height: 1.1; }
+  .bpm small { font-size: 1rem; color: var(--muted); font-weight: 600; }
+  .formula { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .actions { margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .actions button {
+    font: inherit; font-weight: 600; cursor: pointer;
+    border-radius: 10px; padding: 8px 18px;
+    border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
+  }
+  .actions button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+
+  .stage.done { border-color: var(--ok); }
+  .stage.done .progress > div { background: var(--ok); }
+
+  section.log { margin-top: 28px; }
+  section.log h2 { font-size: 1rem; margin: 0 0 8px; }
+  .table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { position: sticky; top: 0; background: var(--surface); color: var(--muted); font-weight: 600; }
+  .empty { color: var(--muted); padding: 14px 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dot, .dot.hit { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>心率点按记录</h1>
+    <div class="durations" role="group" aria-label="测量时长">
+      <span>时长</span>
+      <button data-sec="30" aria-pressed="false">30 秒</button>
+      <button data-sec="60" aria-pressed="true">60 秒</button>
+      <button data-sec="90" aria-pressed="false">90 秒</button>
+      <button data-sec="120" aria-pressed="false">120 秒</button>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <div class="clock" id="clock" aria-live="off">00:00<span class="cs">.00</span></div>
+    <div class="of" id="of">共 60 秒</div>
+    <div class="progress"><div id="bar"></div></div>
+
+    <div class="beat-row">
+      <div class="dot" id="dot" aria-hidden="true"></div>
+      <div>
+        <div class="count" id="count">0</div>
+        <div class="count-label">次跳动</div>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">摸到颈动脉跳动后，按 <kbd>空格</kbd> 或 <kbd>回车</kbd> 开始；之后每跳一下按一次。</p>
+
+    <div class="result" id="result" aria-live="polite">
+      <div class="bpm"><span id="bpm">–</span> <small>次/分</small></div>
+      <div class="formula" id="formula"></div>
+      <div class="actions">
+        <button id="again">重新测量</button>
+        <button id="copy" class="ghost">复制数据</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="log">
+    <h2>每次按键记录</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>第几下</th><th>时间（秒）</th><th>距上一下（毫秒）</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="3" class="empty">还没有记录。</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  // ---- 状态 ----
+  // idle: 等待第一下；recording: 正在记录；done: 已结束
+  let state = "idle";
+  let durationSec = 60;
+  let t0 = 0;          // 第一下的时间（毫秒，performance.now 时间轴）
+  let taps = [];       // 每次按键相对 t0 的毫秒数
+  let rafId = 0;
+  let audio = null;
+
+  const $ = (id) => document.getElementById(id);
+  const clock = $("clock"), bar = $("bar"), count = $("count"), dot = $("dot");
+  const hint = $("hint"), result = $("result"), stage = $("stage"), rows = $("rows");
+  const durBtns = document.querySelectorAll(".durations button");
+
+  // ---- 时长选择（只在 idle 时可改）----
+  durBtns.forEach((b) => b.addEventListener("click", () => {
+    if (state !== "idle") return;
+    durationSec = Number(b.dataset.sec);
+    durBtns.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("of").textContent = "共 " + durationSec + " 秒";
+    b.blur(); // 防止之后按空格时误触按钮
+  }));
+
+  function setDurationLock(locked) { durBtns.forEach((b) => (b.disabled = locked)); }
+
+  // ---- 显示 ----
+  function fmt(ms) {
+    const total = Math.max(0, ms);
+    const m = Math.floor(total / 60000);
+    const s = Math.floor((total % 60000) / 1000);
+    const cs = Math.floor((total % 1000) / 10);
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") +
+      '<span class="cs">.' + String(cs).padStart(2, "0") + "</span>";
+  }
+
+  function tick() {
+    const elapsed = performance.now() - t0;
+    const limit = durationSec * 1000;
+    if (elapsed >= limit) {
+      finish(limit);
+      return;
+    }
+    clock.innerHTML = fmt(elapsed);
+    bar.style.width = (elapsed / limit * 100) + "%";
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function flash() {
+    dot.classList.add("hit");
+    setTimeout(() => dot.classList.remove("hit"), 90);
+  }
+
+  function addRow(i) {
+    if (i === 0) rows.innerHTML = "";
+    const tr = document.createElement("tr");
+    const t = taps[i];
+    const gap = i === 0 ? "–" : Math.round(t - taps[i - 1]);
+    tr.innerHTML = "<td>" + (i + 1) + "</td><td>" + (t / 1000).toFixed(3) + "</td><td>" + gap + "</td>";
+    rows.appendChild(tr);
+    tr.scrollIntoView({ block: "nearest" });
+  }
+
+  // ---- 提醒音 ----
+  function ensureAudio() {
+    if (!audio) {
+      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+    }
+  }
+  function chime() {
+    if (!audio) return;
+    const now = audio.currentTime;
+    [0, 0.22, 0.44].forEach((offset, k) => {
+      const osc = audio.createOscillator();
+      const g = audio.createGain();
+      osc.type = "sine";
+      osc.frequency.value = k === 2 ? 1046 : 880;
+      g.gain.setValueAtTime(0.0001, now + offset);
+      g.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
+      osc.connect(g).connect(audio.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.2);
+    });
+  }
+
+  // ---- 流程 ----
+  function start(ts) {
+    ensureAudio();
+    state = "recording";
+    t0 = ts;
+    taps = [0];
+    count.textContent = "1";
+    addRow(0);
+    flash();
+    setDurationLock(true);
+    hint.innerHTML = "每感到一次跳动按一次。按 <kbd>Esc</kbd> 可提前结束。";
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function tap(ts) {
+    const rel = ts - t0;
+    if (rel >= durationSec * 1000) return; // 超过时长的按键不算
+    taps.push(rel);
+    count.textContent = String(taps.length);
+    addRow(taps.length - 1);
+    flash();
+  }
+
+  function finish(endMs) {
+    cancelAnimationFrame(rafId);
+    state = "done";
+    const shown = Math.min(endMs, durationSec * 1000);
+    clock.innerHTML = fmt(shown);
+    bar.style.width = (shown / (durationSec * 1000) * 100) + "%";
+    stage.classList.add("done");
+    hint.textContent = "测量结束。";
+
+    const n = taps.length;
+    if (n >= 2) {
+      const span = taps[n - 1] - taps[0];
+      const bpm = (n - 1) / span * 60000;
+      $("bpm").textContent = bpm.toFixed(1);
+      $("formula").textContent =
+        "（" + n + " 下 − 1）个间隔 ÷ 第一下到最后一下 " + (span / 1000).toFixed(2) + " 秒 × 60";
+    } else {
+      $("bpm").textContent = "–";
+      $("formula").textContent = "按键少于 2 下，无法计算。";
+    }
+    result.classList.add("show");
+    chime();
+    document.title = "✅ 测量结束 · 心率点按记录";
+  }
+
+  function reset() {
+    cancelAnimationFrame(rafId);
+    state = "idle";
+    taps = [];
+    clock.innerHTML = fmt(0);
+    bar.style.width = "0";
+    count.textContent = "0";
+    stage.classList.remove("done");
+    result.classList.remove("show");
+    rows.innerHTML = '<tr><td colspan="3" class="empty">还没有记录。</td></tr>';
+    hint.innerHTML = "摸到颈动脉跳动后，按 <kbd>空格</kbd> 或 <kbd>回车</kbd> 开始；之后每跳一下按一次。";
+    setDurationLock(false);
+    document.title = "心率点按记录";
+  }
+
+  // ---- 键盘 ----
+  document.addEventListener("keydown", (e) => {
+    const isTapKey = e.code === "Space" || e.key === " " || e.key === "Enter";
+    if (isTapKey) {
+      e.preventDefault();          // 阻止滚动页面或触发按钮
+      if (e.repeat) return;        // 按住不放产生的重复按键不算
+      // 事件自带的时间戳比在这里调用 performance.now() 更接近真实按下时刻
+      const ts = e.timeStamp > 0 ? e.timeStamp : performance.now();
+      if (state === "idle") start(ts);
+      else if (state === "recording") tap(ts);
+      // done 状态下空格不会重新开始，避免误触
+      return;
+    }
+    if (e.key === "Escape") {
+      if (state === "recording") finish(performance.now() - t0);
+      else if (state === "done") reset();
+    }
+    if ((e.key === "r" || e.key === "R") && state === "done") reset();
+  });
+
+  $("again").addEventListener("click", (e) => { e.currentTarget.blur(); reset(); });
+
+  $("copy").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.blur();
+    const lines = ["序号,时间_秒,间隔_毫秒"];
+    taps.forEach((t, i) => lines.push((i + 1) + "," + (t / 1000).toFixed(3) + "," + (i ? Math.round(t - taps[i - 1]) : "")));
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      btn.textContent = "已复制";
+    } catch (err) {
+      btn.textContent = "复制失败";
+    }
+    setTimeout(() => (btn.textContent = "复制数据"), 1500);
+  });
+})();
+</script>
+</body>
+</html>
