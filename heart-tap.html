@@ -9,14 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #eef2f3;
-    --surface: #ffffff;
-    --ink: #1c2430;
-    --muted: #5d6875;
-    --line: #d3dade;
-    --pulse: #c8323c;
-    --pulse-soft: rgba(200, 50, 60, 0.14);
-    --ok: #2f7a5b;
+    --bg: #eef2f3; --surface: #ffffff; --ink: #1c2430; --muted: #5d6875; --line: #d3dade;
+    --pulse: #c8323c; --pulse-soft: rgba(200, 50, 60, 0.14);
+    --ok: #2f7a5b; --ok-soft: rgba(47, 122, 91, 0.12);
+    --warn: #a86a12; --warn-soft: rgba(168, 106, 18, 0.12);
     color-scheme: light;
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
@@ -24,120 +20,110 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #151b22;
-      --surface: #1d252e;
-      --ink: #e6ecf0;
-      --muted: #94a1ad;
-      --line: #2e3a46;
-      --pulse: #ff5a63;
-      --pulse-soft: rgba(255, 90, 99, 0.18);
-      --ok: #5cc296;
+      --bg: #151b22; --surface: #1d252e; --ink: #e6ecf0; --muted: #94a1ad; --line: #2e3a46;
+      --pulse: #ff5a63; --pulse-soft: rgba(255, 90, 99, 0.18);
+      --ok: #5cc296; --ok-soft: rgba(92, 194, 150, 0.15);
+      --warn: #e0a43a; --warn-soft: rgba(224, 164, 58, 0.15);
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #151b22; --surface: #1d252e; --ink: #e6ecf0; --muted: #94a1ad;
-    --line: #2e3a46; --pulse: #ff5a63; --pulse-soft: rgba(255, 90, 99, 0.18);
-    --ok: #5cc296; color-scheme: dark;
+    --bg: #151b22; --surface: #1d252e; --ink: #e6ecf0; --muted: #94a1ad; --line: #2e3a46;
+    --pulse: #ff5a63; --pulse-soft: rgba(255, 90, 99, 0.18);
+    --ok: #5cc296; --ok-soft: rgba(92, 194, 150, 0.15);
+    --warn: #e0a43a; --warn-soft: rgba(224, 164, 58, 0.15);
+    color-scheme: dark;
   }
   *, *::before, *::after { box-sizing: border-box; }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
   body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
+    margin: 0; background: var(--bg); color: var(--ink);
     font-family: "Manrope", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.5;
+    font-variant-numeric: tabular-nums; line-height: 1.5;
   }
   main { max-width: 720px; margin: 0 auto; padding: 24px 20px 48px; }
-
-  header {
-    display: flex; flex-wrap: wrap; gap: 12px;
-    align-items: center; justify-content: space-between;
-    margin-bottom: 28px;
-  }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 28px; }
   h1 { font-size: 1.15rem; font-weight: 800; margin: 0; }
-  .durations { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.9rem; }
+  .durations { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.9rem; flex-wrap: wrap; }
   .durations button {
     font: inherit; color: var(--ink); background: transparent;
-    border: 1px solid var(--line); border-radius: 999px;
-    padding: 4px 12px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer;
   }
   .durations button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
   .durations button:disabled { opacity: 0.45; cursor: not-allowed; }
   button:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
 
-  .stage {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 32px 24px 28px;
-    text-align: center;
-  }
-  .clock {
-    font-size: clamp(3.4rem, 15vw, 6.5rem);
-    font-weight: 800; letter-spacing: -0.02em; line-height: 1;
-  }
+  .stage { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 32px 24px 28px; text-align: center; }
+  .stage.paused { border-color: var(--warn); }
+  .stage.done { border-color: var(--ok); }
+  .clock { font-size: clamp(3.4rem, 15vw, 6.5rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
   .clock .cs { font-size: 0.45em; color: var(--muted); font-weight: 600; }
   .of { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
-
   .progress { height: 6px; background: var(--line); border-radius: 3px; margin: 22px 0 28px; overflow: hidden; }
   .progress > div { height: 100%; width: 0; background: var(--pulse); }
+  .stage.paused .progress > div { background: var(--warn); }
+  .stage.done .progress > div { background: var(--ok); }
 
   .beat-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
-  .dot {
-    width: 54px; height: 54px; border-radius: 50%;
-    background: var(--pulse-soft); border: 2px solid var(--pulse);
-    transition: background 180ms ease-out, transform 180ms ease-out;
-  }
+  .dot { width: 54px; height: 54px; border-radius: 50%; background: var(--pulse-soft); border: 2px solid var(--pulse);
+    transition: background 180ms ease-out, transform 180ms ease-out; }
   .dot.hit { background: var(--pulse); transform: scale(1.12); transition: none; }
+  .stage.paused .dot { border-color: var(--warn); background: var(--warn-soft); }
   .count { font-size: 3rem; font-weight: 800; line-height: 1; }
   .count-label { color: var(--muted); font-size: 0.9rem; text-align: left; }
+  .seg-info { color: var(--muted); font-size: 0.9rem; margin-top: 10px; min-height: 1.5em; }
 
-  .hint { margin: 26px 0 0; color: var(--muted); }
-  .hint kbd {
-    font: inherit; font-weight: 600; color: var(--ink);
-    border: 1px solid var(--line); border-bottom-width: 2px;
-    border-radius: 6px; padding: 0 6px;
-  }
+  .hint { margin: 22px auto 0; color: var(--muted); max-width: 34em; }
+  .hint kbd { font: inherit; font-weight: 600; color: var(--ink); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; }
+  .pause-note { color: var(--warn); font-weight: 600; margin-top: 8px; min-height: 1.5em; }
 
-  .result { margin-top: 20px; display: none; }
-  .result.show { display: block; }
+  .actions { margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .actions button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 8px 18px;
+    border: 1px solid var(--ink); background: var(--ink); color: var(--bg); }
+  .actions button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  [hidden] { display: none !important; }
+
+  .result { margin-top: 20px; }
   .bpm { font-size: 2.6rem; font-weight: 800; color: var(--ok); line-height: 1.1; }
   .bpm small { font-size: 1rem; color: var(--muted); font-weight: 600; }
   .formula { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-  .actions { margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .actions button {
-    font: inherit; font-weight: 600; cursor: pointer;
-    border-radius: 10px; padding: 8px 18px;
-    border: 1px solid var(--ink); background: var(--ink); color: var(--bg);
-  }
-  .actions button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
 
-  .stage.done { border-color: var(--ok); }
-  .stage.done .progress > div { background: var(--ok); }
+  section.block { margin-top: 28px; }
+  section.block h2 { font-size: 1rem; margin: 0 0 8px; }
+  .segs { display: flex; flex-direction: column; gap: 8px; }
+  .seg { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--surface);
+    border: 1px solid var(--line); border-left-width: 4px; border-radius: 12px; padding: 10px 14px; }
+  .seg.good { border-left-color: var(--ok); background: var(--ok-soft); }
+  .seg.bad { border-left-color: var(--pulse); background: var(--pulse-soft); }
+  .seg-name { font-weight: 800; min-width: 4.5em; }
+  .seg-meta { color: var(--muted); font-size: 0.9rem; flex: 1; min-width: 12em; }
+  .seg-tags { display: flex; gap: 6px; }
+  .seg-tags button { font: inherit; font-size: 0.9rem; cursor: pointer; border-radius: 8px; padding: 2px 12px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+  .seg-tags button[data-l="good"][aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+  .seg-tags button[data-l="bad"][aria-pressed="true"] { background: var(--pulse); border-color: var(--pulse); color: var(--surface); }
+  .seg-tags button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .empty-note { color: var(--muted); font-size: 0.92rem; }
 
-  section.log { margin-top: 28px; }
-  section.log h2 { font-size: 1rem; margin: 0 0 8px; }
   .table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
   table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-  th, td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--line); }
+  th, td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; }
   th { position: sticky; top: 0; background: var(--surface); color: var(--muted); font-weight: 600; }
+  tr.del td { color: var(--muted); text-decoration: line-through; }
+  tr.del td:last-child { text-decoration: none; color: var(--pulse); }
+  tr.seg-start td { border-top: 2px solid var(--line); }
   .empty { color: var(--muted); padding: 14px 12px; }
 
-  @media (prefers-reduced-motion: reduce) {
-    .dot, .dot.hit { transition: none; transform: none; }
-  }
+  @media (prefers-reduced-motion: reduce) { .dot, .dot.hit { transition: none; transform: none; } }
 </style>
 </head>
 <body>
 <main>
   <header>
     <h1>心率点按记录</h1>
-    <div class="durations" role="group" aria-label="测量时长">
-      <span>时长</span>
+    <div class="durations" role="group" aria-label="有效记录时长">
+      <span>有效时长</span>
       <button data-sec="30" aria-pressed="false">30 秒</button>
       <button data-sec="60" aria-pressed="true">60 秒</button>
       <button data-sec="90" aria-pressed="false">90 秒</button>
@@ -146,21 +132,28 @@
   </header>
 
   <div class="stage" id="stage">
-    <div class="clock" id="clock" aria-live="off">00:00<span class="cs">.00</span></div>
-    <div class="of" id="of">共 60 秒</div>
+    <div class="clock" id="clock">00:00<span class="cs">.00</span></div>
+    <div class="of" id="of">有效记录时间 / 共 60 秒（暂停不计时）</div>
     <div class="progress"><div id="bar"></div></div>
 
     <div class="beat-row">
       <div class="dot" id="dot" aria-hidden="true"></div>
       <div>
         <div class="count" id="count">0</div>
-        <div class="count-label">次跳动</div>
+        <div class="count-label">次有效跳动</div>
       </div>
     </div>
+    <div class="seg-info" id="segInfo"></div>
 
-    <p class="hint" id="hint">摸到颈动脉跳动后，按 <kbd>空格</kbd> 或 <kbd>回车</kbd> 开始；之后每跳一下按一次。</p>
+    <p class="hint" id="hint"></p>
+    <div class="pause-note" id="pauseNote"></div>
 
-    <div class="result" id="result" aria-live="polite">
+    <div class="actions" id="controls">
+      <button id="pauseBtn" class="ghost" hidden>暂停</button>
+      <button id="endBtn" class="ghost" hidden>结束</button>
+    </div>
+
+    <div class="result" id="result" hidden aria-live="polite">
       <div class="bpm"><span id="bpm">–</span> <small>次/分</small></div>
       <div class="formula" id="formula"></div>
       <div class="actions">
@@ -170,12 +163,17 @@
     </div>
   </div>
 
-  <section class="log">
+  <section class="block">
+    <h2>分段</h2>
+    <div class="segs" id="segs"><div class="empty-note">每次暂停都会把记录分成新的一段。暂停或结束后，可以把某一段标为“好”或“乱”。</div></div>
+  </section>
+
+  <section class="block">
     <h2>每次按键记录</h2>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>第几下</th><th>时间（秒）</th><th>距上一下（毫秒）</th></tr></thead>
-        <tbody id="rows"><tr><td colspan="3" class="empty">还没有记录。</td></tr></tbody>
+        <thead><tr><th>段</th><th>第几下</th><th>时间（秒）</th><th>距上一下（毫秒）</th><th>状态</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5" class="empty">还没有记录。</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -183,80 +181,155 @@
 
 <script>
 (function () {
-  // ---- 状态 ----
-  // idle: 等待第一下；recording: 正在记录；done: 已结束
+  // ================= 可调参数 =================
+  const AUTO_PAUSE_MIN_MS = 3000;   // 至少这么久没按，才判定为“停下来调整”
+  const AUTO_PAUSE_FACTOR = 2.5;    // 或者本段中位间隔的 2.5 倍，两者取较大的
+  const IDLE_END_MS = 60000;        // 暂停超过这么久，自动结束整个测量
+  const TRIM_LOW = 0.75;            // 自动暂停时，从末尾往前检查：
+  const TRIM_HIGH = 1.33;           //   间隔不在 中位数×[0.75, 1.33] 内的按键会被删去
+  const TRIM_MIN_INTERVALS = 4;     // 本段间隔少于这个数时不做删减（中位数不可靠）
+
+  // ================= 状态 =================
+  // idle 等待开始；recording 记录中；paused 暂停；done 结束
   let state = "idle";
-  let durationSec = 60;
-  let t0 = 0;          // 第一下的时间（毫秒，performance.now 时间轴）
-  let taps = [];       // 每次按键相对 t0 的毫秒数
+  let targetSec = 60;
+  let recStart = 0;        // 整个测量第一下的时间
+  let segments = [];       // 每段：{ taps: [{t, n, deleted, tr, statusCell}], label, end, trimmed }
+  let finishedActive = 0;  // 已结束各段的有效时长之和（毫秒）
+  let pauseStart = 0;
+  let tapNo = 0;
   let rafId = 0;
   let audio = null;
 
   const $ = (id) => document.getElementById(id);
-  const clock = $("clock"), bar = $("bar"), count = $("count"), dot = $("dot");
-  const hint = $("hint"), result = $("result"), stage = $("stage"), rows = $("rows");
+  const clock = $("clock"), bar = $("bar"), count = $("count"), dot = $("dot"), segInfo = $("segInfo");
+  const hint = $("hint"), pauseNote = $("pauseNote"), stage = $("stage"), rows = $("rows"), segsBox = $("segs");
+  const pauseBtn = $("pauseBtn"), endBtn = $("endBtn"), result = $("result");
   const durBtns = document.querySelectorAll(".durations button");
 
-  // ---- 时长选择（只在 idle 时可改）----
-  durBtns.forEach((b) => b.addEventListener("click", () => {
-    if (state !== "idle") return;
-    durationSec = Number(b.dataset.sec);
-    durBtns.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    $("of").textContent = "共 " + durationSec + " 秒";
-    b.blur(); // 防止之后按空格时误触按钮
-  }));
+  // ================= 小工具 =================
+  const cur = () => segments[segments.length - 1];
+  const kept = (seg) => seg.taps.filter((x) => !x.deleted);
+  function intervals(seg) {
+    const k = kept(seg), out = [];
+    for (let i = 1; i < k.length; i++) out.push(k[i].t - k[i - 1].t);
+    return out;
+  }
+  function median(a) {
+    if (!a.length) return 0;
+    const s = [...a].sort((x, y) => x - y), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function span(seg) {
+    const k = kept(seg);
+    return k.length >= 2 ? k[k.length - 1].t - k[0].t : 0;
+  }
+  function segBpm(seg) {
+    const k = kept(seg), sp = span(seg);
+    return k.length >= 2 && sp > 0 ? (k.length - 1) / sp * 60000 : null;
+  }
+  const totalKept = () => segments.reduce((s, g) => s + kept(g).length, 0);
 
-  function setDurationLock(locked) { durBtns.forEach((b) => (b.disabled = locked)); }
-
-  // ---- 显示 ----
   function fmt(ms) {
     const total = Math.max(0, ms);
-    const m = Math.floor(total / 60000);
-    const s = Math.floor((total % 60000) / 1000);
-    const cs = Math.floor((total % 1000) / 10);
-    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") +
-      '<span class="cs">.' + String(cs).padStart(2, "0") + "</span>";
+    const m = Math.floor(total / 60000), s = Math.floor((total % 60000) / 1000), cs = Math.floor((total % 1000) / 10);
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0") + '<span class="cs">.' + String(cs).padStart(2, "0") + "</span>";
   }
-
-  function tick() {
-    const elapsed = performance.now() - t0;
-    const limit = durationSec * 1000;
-    if (elapsed >= limit) {
-      finish(limit);
-      return;
-    }
-    clock.innerHTML = fmt(elapsed);
-    bar.style.width = (elapsed / limit * 100) + "%";
-    rafId = requestAnimationFrame(tick);
+  function showActive(ms) {
+    clock.innerHTML = fmt(ms);
+    bar.style.width = Math.min(100, ms / (targetSec * 1000) * 100) + "%";
   }
-
   function flash() {
     dot.classList.add("hit");
     setTimeout(() => dot.classList.remove("hit"), 90);
   }
 
-  function addRow(i) {
-    if (i === 0) rows.innerHTML = "";
-    const tr = document.createElement("tr");
-    const t = taps[i];
-    const gap = i === 0 ? "–" : Math.round(t - taps[i - 1]);
-    tr.innerHTML = "<td>" + (i + 1) + "</td><td>" + (t / 1000).toFixed(3) + "</td><td>" + gap + "</td>";
-    rows.appendChild(tr);
-    tr.scrollIntoView({ block: "nearest" });
+  // ================= 界面文字 =================
+  const KEY = (k) => "<kbd>" + k + "</kbd>";
+  function updateHint() {
+    pauseBtn.hidden = state !== "recording";
+    endBtn.hidden = !(state === "recording" || state === "paused");
+    pauseNote.textContent = "";
+    if (state === "idle") {
+      hint.innerHTML = "摸到颈动脉跳动后，按 " + KEY("空格") + " 或 " + KEY("回车") + " 开始；之后每跳一下按一次。";
+    } else if (state === "recording") {
+      hint.innerHTML = "每感到一次跳动按一次。乱了就停手几秒，程序会自动暂停，并删去末尾乱掉的几下。" +
+        KEY("P") + " 暂停，" + KEY("Esc") + " 结束。";
+    } else if (state === "paused") {
+      hint.innerHTML = "已暂停。重新摸准后，在某次跳动时按 " + KEY("空格") + " 继续（新的一段）。" +
+        KEY("G") + " / " + KEY("B") + " 把上一段标为好 / 乱，" + KEY("Esc") + " 结束。";
+    } else {
+      hint.innerHTML = "测量结束。可以在下方给各段标记好 / 乱，结果会随之更新。" + KEY("R") + " 重新测量。";
+    }
+  }
+  function updateCounts() {
+    count.textContent = String(totalKept());
+    if (!segments.length) { segInfo.textContent = ""; return; }
+    segInfo.textContent = "第 " + segments.length + " 段 · 本段 " + kept(cur()).length + " 下";
   }
 
-  // ---- 提醒音 ----
+  // ================= 表格 =================
+  function addRow(tap, segNo, gap, isSegStart) {
+    if (rows.querySelector(".empty")) rows.innerHTML = "";
+    const tr = document.createElement("tr");
+    if (isSegStart && segNo > 1) tr.className = "seg-start";
+    tr.innerHTML = "<td>" + segNo + "</td><td>" + tap.n + "</td><td>" + ((tap.t - recStart) / 1000).toFixed(3) +
+      "</td><td>" + (gap == null ? (isSegStart ? "新的一段" : "–") : Math.round(gap)) + "</td><td></td>";
+    rows.appendChild(tr);
+    tr.scrollIntoView({ block: "nearest" });
+    tap.tr = tr;
+    tap.statusCell = tr.lastElementChild;
+  }
+
+  // ================= 分段列表 =================
+  const END_TEXT = { auto: "自动暂停", manual: "手动暂停", target: "到达时长", stop: "手动结束", "": "记录中" };
+  function renderSegments() {
+    if (!segments.length) return;
+    segsBox.innerHTML = "";
+    segments.forEach((seg, i) => {
+      const closed = seg.end !== "";
+      const k = kept(seg), bpm = segBpm(seg);
+      const div = document.createElement("div");
+      div.className = "seg" + (seg.label ? " " + seg.label : "");
+      let meta;
+      if (closed && k.length < 2) meta = k.length + " 下，太短，不计入";
+      else meta = k.length + " 下 · " + (span(seg) / 1000).toFixed(1) + " 秒" + (bpm ? " · " + bpm.toFixed(1) + " 次/分" : "");
+      meta += " · " + END_TEXT[seg.end] + (seg.trimmed ? "，删去末尾 " + seg.trimmed + " 下" : "");
+      div.innerHTML =
+        '<div class="seg-name">第 ' + (i + 1) + ' 段</div><div class="seg-meta">' + meta + "</div>" +
+        '<div class="seg-tags">' +
+        '<button data-i="' + i + '" data-l="good" aria-pressed="' + (seg.label === "good") + '"' + (closed ? "" : " disabled") + ">好</button>" +
+        '<button data-i="' + i + '" data-l="bad" aria-pressed="' + (seg.label === "bad") + '"' + (closed ? "" : " disabled") + ">乱</button></div>";
+      segsBox.appendChild(div);
+    });
+  }
+  segsBox.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-l]");
+    if (!b) return;
+    b.blur();
+    setLabel(Number(b.dataset.i), b.dataset.l);
+  });
+  function setLabel(i, label) {
+    const seg = segments[i];
+    if (!seg || seg.end === "") return;
+    seg.label = seg.label === label ? null : label; // 再点一次取消
+    renderSegments();
+    if (state === "done") computeResult();
+  }
+  function lastClosedIndex() {
+    for (let i = segments.length - 1; i >= 0; i--) if (segments[i].end !== "") return i;
+    return -1;
+  }
+
+  // ================= 声音 =================
   function ensureAudio() {
-    if (!audio) {
-      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
-    }
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; } }
   }
   function chime() {
     if (!audio) return;
     const now = audio.currentTime;
     [0, 0.22, 0.44].forEach((offset, k) => {
-      const osc = audio.createOscillator();
-      const g = audio.createGain();
+      const osc = audio.createOscillator(), g = audio.createGain();
       osc.type = "sine";
       osc.frequency.value = k === 2 ? 1046 : 880;
       g.gain.setValueAtTime(0.0001, now + offset);
@@ -268,104 +341,197 @@
     });
   }
 
-  // ---- 流程 ----
-  function start(ts) {
-    ensureAudio();
+  // ================= 流程 =================
+  function startSegment(ts) {
+    if (state === "idle") {
+      recStart = ts;
+      ensureAudio();
+      durBtns.forEach((b) => (b.disabled = true));
+    }
+    segments.push({ taps: [], label: null, end: "", trimmed: 0 });
     state = "recording";
-    t0 = ts;
-    taps = [0];
-    count.textContent = "1";
-    addRow(0);
-    flash();
-    setDurationLock(true);
-    hint.innerHTML = "每感到一次跳动按一次。按 <kbd>Esc</kbd> 可提前结束。";
+    stage.classList.remove("paused");
+    addTap(ts);
+    updateHint();
+    renderSegments();
+    cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(tick);
   }
 
-  function tap(ts) {
-    const rel = ts - t0;
-    if (rel >= durationSec * 1000) return; // 超过时长的按键不算
-    taps.push(rel);
-    count.textContent = String(taps.length);
-    addRow(taps.length - 1);
+  function addTap(ts) {
+    const seg = cur();
+    const prev = seg.taps[seg.taps.length - 1];
+    const tap = { t: ts, n: ++tapNo, deleted: false };
+    seg.taps.push(tap);
+    addRow(tap, segments.length, prev ? ts - prev.t : null, !prev);
+    updateCounts();
     flash();
   }
 
-  function finish(endMs) {
-    cancelAnimationFrame(rafId);
-    state = "done";
-    const shown = Math.min(endMs, durationSec * 1000);
-    clock.innerHTML = fmt(shown);
-    bar.style.width = (shown / (durationSec * 1000) * 100) + "%";
-    stage.classList.add("done");
-    hint.textContent = "测量结束。";
-
-    const n = taps.length;
-    if (n >= 2) {
-      const span = taps[n - 1] - taps[0];
-      const bpm = (n - 1) / span * 60000;
-      $("bpm").textContent = bpm.toFixed(1);
-      $("formula").textContent =
-        "（" + n + " 下 − 1）个间隔 ÷ 第一下到最后一下 " + (span / 1000).toFixed(2) + " 秒 × 60";
-    } else {
-      $("bpm").textContent = "–";
-      $("formula").textContent = "按键少于 2 下，无法计算。";
+  // 自动暂停时：从末尾往前删去偏离中位数太多的按键，遇到正常的就停
+  function trim(seg) {
+    const iv = intervals(seg);
+    if (iv.length < TRIM_MIN_INTERVALS) return;
+    const med = median(iv);
+    let k = kept(seg);
+    while (k.length > 2) {
+      const last = k[k.length - 1].t - k[k.length - 2].t;
+      if (last >= med * TRIM_LOW && last <= med * TRIM_HIGH) break;
+      const tp = k[k.length - 1];
+      tp.deleted = true;
+      seg.trimmed++;
+      tp.tr.classList.add("del");
+      tp.statusCell.textContent = "已删去";
+      k = kept(seg);
     }
-    result.classList.add("show");
+  }
+
+  function closeSegment(reason) {
+    const seg = cur();
+    if (reason === "auto") trim(seg);
+    seg.end = reason;
+    finishedActive += span(seg);
+  }
+
+  function pause(reason) {
+    closeSegment(reason);
+    state = "paused";
+    pauseStart = performance.now();
+    stage.classList.add("paused");
+    showActive(finishedActive);
+    updateCounts();
+    updateHint();
+    renderSegments();
+  }
+
+  function tick() {
+    const now = performance.now();
+    if (state === "recording") {
+      const seg = cur(), k = kept(seg);
+      const lastT = k[k.length - 1].t;
+      const threshold = Math.max(AUTO_PAUSE_MIN_MS, median(intervals(seg)) * AUTO_PAUSE_FACTOR);
+      if (now - lastT > threshold) {
+        pause("auto");
+      } else {
+        const active = finishedActive + (now - k[0].t);
+        if (active >= targetSec * 1000) { finish("target"); return; }
+        showActive(active);
+      }
+    } else if (state === "paused") {
+      const left = IDLE_END_MS - (now - pauseStart);
+      if (left <= 0) { finish("idle"); return; }
+      pauseNote.textContent = "暂停中：" + Math.ceil(left / 1000) + " 秒内不继续将自动结束";
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function finish(reason) {
+    cancelAnimationFrame(rafId);
+    if (state === "recording") closeSegment(reason === "target" ? "target" : "stop");
+    state = "done";
+    stage.classList.remove("paused");
+    stage.classList.add("done");
+    showActive(finishedActive);
+    updateCounts();
+    updateHint();
+    renderSegments();
+    computeResult();
+    result.hidden = false;
     chime();
     document.title = "✅ 测量结束 · 心率点按记录";
+  }
+
+  // 结果：有标为“好”的段就只用这些段；否则用所有没标为“乱”的段
+  function computeResult() {
+    const valid = segments.filter((s) => kept(s).length >= 2);
+    const good = valid.filter((s) => s.label === "good");
+    const use = good.length ? good : valid.filter((s) => s.label !== "bad");
+    let n = 0, sp = 0;
+    use.forEach((s) => { n += kept(s).length - 1; sp += span(s); });
+    if (n > 0 && sp > 0) {
+      $("bpm").textContent = (n / sp * 60000).toFixed(1);
+      const basis = good.length ? "只用标为“好”的 " + use.length + " 段" : "用未标为“乱”的 " + use.length + " 段";
+      $("formula").textContent = basis + "：" + n + " 个间隔 ÷ " + (sp / 1000).toFixed(2) + " 秒 × 60";
+    } else {
+      $("bpm").textContent = "–";
+      $("formula").textContent = "没有可用的段（每段至少需要 2 下）。";
+    }
   }
 
   function reset() {
     cancelAnimationFrame(rafId);
     state = "idle";
-    taps = [];
-    clock.innerHTML = fmt(0);
-    bar.style.width = "0";
+    segments = [];
+    finishedActive = 0;
+    tapNo = 0;
+    showActive(0);
     count.textContent = "0";
-    stage.classList.remove("done");
-    result.classList.remove("show");
-    rows.innerHTML = '<tr><td colspan="3" class="empty">还没有记录。</td></tr>';
-    hint.innerHTML = "摸到颈动脉跳动后，按 <kbd>空格</kbd> 或 <kbd>回车</kbd> 开始；之后每跳一下按一次。";
-    setDurationLock(false);
+    segInfo.textContent = "";
+    stage.classList.remove("done", "paused");
+    result.hidden = true;
+    rows.innerHTML = '<tr><td colspan="5" class="empty">还没有记录。</td></tr>';
+    segsBox.innerHTML = '<div class="empty-note">每次暂停都会把记录分成新的一段。暂停或结束后，可以把某一段标为“好”或“乱”。</div>';
+    durBtns.forEach((b) => (b.disabled = false));
+    updateHint();
     document.title = "心率点按记录";
   }
 
-  // ---- 键盘 ----
-  document.addEventListener("keydown", (e) => {
-    const isTapKey = e.code === "Space" || e.key === " " || e.key === "Enter";
-    if (isTapKey) {
-      e.preventDefault();          // 阻止滚动页面或触发按钮
-      if (e.repeat) return;        // 按住不放产生的重复按键不算
-      // 事件自带的时间戳比在这里调用 performance.now() 更接近真实按下时刻
-      const ts = e.timeStamp > 0 ? e.timeStamp : performance.now();
-      if (state === "idle") start(ts);
-      else if (state === "recording") tap(ts);
-      // done 状态下空格不会重新开始，避免误触
-      return;
-    }
-    if (e.key === "Escape") {
-      if (state === "recording") finish(performance.now() - t0);
-      else if (state === "done") reset();
-    }
-    if ((e.key === "r" || e.key === "R") && state === "done") reset();
-  });
+  // ================= 输入 =================
+  durBtns.forEach((b) => b.addEventListener("click", () => {
+    b.blur();
+    if (state !== "idle") return;
+    targetSec = Number(b.dataset.sec);
+    durBtns.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("of").textContent = "有效记录时间 / 共 " + targetSec + " 秒（暂停不计时）";
+  }));
 
+  const isTapKey = (e) => e.code === "Space" || e.key === " " || e.key === "Enter";
+
+  document.addEventListener("keydown", (e) => {
+    if (isTapKey(e)) {
+      e.preventDefault();      // 阻止滚动页面、触发按钮
+      if (e.repeat) return;    // 按住不放的重复按键不算
+      const ts = e.timeStamp > 0 ? e.timeStamp : performance.now();
+      if (state === "idle" || state === "paused") startSegment(ts);
+      else if (state === "recording") addTap(ts);
+      return;                  // done 状态下空格不做任何事，避免误触
+    }
+    const k = e.key.toLowerCase();
+    if (k === "escape") {
+      if (state === "recording" || state === "paused") finish("stop");
+      else if (state === "done") reset();
+    } else if (k === "p" && state === "recording") {
+      pause("manual");
+    } else if ((k === "g" || k === "b") && (state === "paused" || state === "done")) {
+      const i = lastClosedIndex();
+      if (i >= 0) setLabel(i, k === "g" ? "good" : "bad");
+    } else if (k === "r" && state === "done") {
+      reset();
+    }
+  });
+  document.addEventListener("keyup", (e) => { if (isTapKey(e)) e.preventDefault(); });
+
+  pauseBtn.addEventListener("click", () => { pauseBtn.blur(); if (state === "recording") pause("manual"); });
+  endBtn.addEventListener("click", () => { endBtn.blur(); if (state === "recording" || state === "paused") finish("stop"); });
   $("again").addEventListener("click", (e) => { e.currentTarget.blur(); reset(); });
 
   $("copy").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
     btn.blur();
-    const lines = ["序号,时间_秒,间隔_毫秒"];
-    taps.forEach((t, i) => lines.push((i + 1) + "," + (t / 1000).toFixed(3) + "," + (i ? Math.round(t - taps[i - 1]) : "")));
-    try {
-      await navigator.clipboard.writeText(lines.join("\n"));
-      btn.textContent = "已复制";
-    } catch (err) {
-      btn.textContent = "复制失败";
-    }
+    const lines = ["段,标记,序号,时间_秒,间隔_毫秒,已删去"];
+    segments.forEach((seg, si) => {
+      seg.taps.forEach((tap, ti) => {
+        const gap = ti ? Math.round(tap.t - seg.taps[ti - 1].t) : "";
+        lines.push([si + 1, seg.label === "good" ? "好" : seg.label === "bad" ? "乱" : "", tap.n,
+          ((tap.t - recStart) / 1000).toFixed(3), gap, tap.deleted ? "是" : ""].join(","));
+      });
+    });
+    try { await navigator.clipboard.writeText(lines.join("\n")); btn.textContent = "已复制"; }
+    catch (err) { btn.textContent = "复制失败"; }
     setTimeout(() => (btn.textContent = "复制数据"), 1500);
   });
+
+  updateHint();
 })();
 </script>
 </body>
