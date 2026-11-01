@@ -51,6 +51,13 @@
   }
   .durations button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
   .durations button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .custom-sec { display: inline-flex; align-items: center; gap: 4px; }
+  .custom-sec input { font: inherit; color: var(--ink); background: var(--surface); width: 4.5em;
+    border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; text-align: right; }
+  .custom-sec input:focus-visible { outline: 2px solid var(--pulse); outline-offset: 1px; }
+  .custom-sec input:disabled { opacity: 0.45; }
+  .custom-err { color: var(--pulse); font-size: 0.85rem; }
+  .progress.unlimited { visibility: hidden; }
   button:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
 
   .stage { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 32px 24px 28px; text-align: center; }
@@ -145,17 +152,21 @@
     <h1>心率点按记录</h1>
     <div class="durations" role="group" aria-label="有效记录时长">
       <span>有效时长</span>
+      <button data-sec="0" aria-pressed="true">不限时</button>
       <button data-sec="30" aria-pressed="false">30 秒</button>
-      <button data-sec="60" aria-pressed="true">60 秒</button>
-      <button data-sec="90" aria-pressed="false">90 秒</button>
-      <button data-sec="120" aria-pressed="false">120 秒</button>
+      <button data-sec="60" aria-pressed="false">60 秒</button>
+      <button data-sec="custom" aria-pressed="false">自定义</button>
+      <span class="custom-sec" id="customBox" hidden>
+        <input id="customSec" type="number" min="10" max="1800" step="5" value="90" aria-label="自定义时长（秒）"> 秒
+        <span class="custom-err" id="customErr"></span>
+      </span>
     </div>
   </header>
 
   <div class="stage" id="stage">
     <div class="clock" id="clock">00:00<span class="cs">.00</span></div>
-    <div class="of" id="of">有效记录时间 / 共 60 秒（暂停不计时）</div>
-    <div class="progress"><div id="bar"></div></div>
+    <div class="of" id="of">有效记录时间 / 不限时（暂停不计时）</div>
+    <div class="progress unlimited" id="progress"><div id="bar"></div></div>
 
     <div class="beat-row">
       <div class="dot" id="dot" aria-hidden="true"></div>
@@ -226,7 +237,7 @@
   // ================= 状态 =================
   // idle 等待开始；recording 记录中；paused 暂停；done 结束
   let state = "idle";
-  let targetSec = 60;
+  let targetSec = 0;       // 0 = 不限时，只能手动结束或暂停太久自动结束
   let recStart = 0;        // 整个测量第一下的时间
   let segments = [];       // 每段：{ taps: [{t, n, deleted, tr, statusCell}], label, end, trimmed }
   let finishedActive = 0;  // 已结束各段的有效时长之和（毫秒）
@@ -271,7 +282,7 @@
   }
   function showActive(ms) {
     clock.innerHTML = fmt(ms);
-    bar.style.width = Math.min(100, ms / (targetSec * 1000) * 100) + "%";
+    bar.style.width = targetSec ? Math.min(100, ms / (targetSec * 1000) * 100) + "%" : "0";
   }
   function flash() {
     dot.classList.add("hit");
@@ -487,6 +498,7 @@
       recStart = ts;
       ensureAudio();
       durBtns.forEach((b) => (b.disabled = true));
+      customInput.disabled = true;
     }
     segments.push({ taps: [], label: null, end: "", trimmed: 0 });
     state = "recording";
@@ -554,7 +566,7 @@
         pause("auto");
       } else {
         const active = finishedActive + (now - k[0].t);
-        if (active >= targetSec * 1000) { finish("target"); return; }
+        if (targetSec && active >= targetSec * 1000) { finish("target"); return; }
         showActive(active);
       }
     } else if (state === "paused") {
@@ -612,23 +624,59 @@
     rows.innerHTML = '<tr><td colspan="5" class="empty">还没有记录。</td></tr>';
     segsBox.innerHTML = '<div class="empty-note">每次暂停都会把记录分成新的一段。暂停或结束后，可以把某一段标为“好”或“乱”。</div>';
     durBtns.forEach((b) => (b.disabled = false));
+    customInput.disabled = false;
     updateHint();
     renderChart();
     document.title = "心率点按记录";
   }
 
   // ================= 输入 =================
+  const customBox = $("customBox"), customInput = $("customSec"), customErr = $("customErr");
+
+  function applyTarget(sec) {
+    targetSec = sec;
+    $("progress").classList.toggle("unlimited", !sec);
+    $("of").textContent = sec
+      ? "有效记录时间 / 共 " + sec + " 秒（暂停不计时）"
+      : "有效记录时间 / 不限时（暂停不计时）";
+  }
+
+  // 自定义时长：10–1800 秒，不合法时提示并保持原来的设置
+  function readCustom() {
+    const v = Number(customInput.value);
+    if (!Number.isFinite(v) || v < 10 || v > 1800) {
+      customErr.textContent = "请输入 10–1800 之间的秒数";
+      return false;
+    }
+    customErr.textContent = "";
+    applyTarget(Math.round(v));
+    return true;
+  }
+
   durBtns.forEach((b) => b.addEventListener("click", () => {
     b.blur();
     if (state !== "idle") return;
-    targetSec = Number(b.dataset.sec);
     durBtns.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    $("of").textContent = "有效记录时间 / 共 " + targetSec + " 秒（暂停不计时）";
+    if (b.dataset.sec === "custom") {
+      customBox.hidden = false;
+      readCustom();
+      customInput.focus();
+      customInput.select();
+    } else {
+      customBox.hidden = true;
+      customErr.textContent = "";
+      applyTarget(Number(b.dataset.sec));
+    }
   }));
+  customInput.addEventListener("input", readCustom);
 
   const isTapKey = (e) => e.code === "Space" || e.key === " " || e.key === "Enter";
 
   document.addEventListener("keydown", (e) => {
+    if (e.target === customInput) {           // 正在输入自定义秒数时，按键不触发记录
+      if (e.key === "Enter") { e.preventDefault(); if (readCustom()) customInput.blur(); }
+      return;
+    }
     if (isTapKey(e)) {
       e.preventDefault();      // 阻止滚动页面、触发按钮
       if (e.repeat) return;    // 按住不放的重复按键不算
@@ -650,7 +698,7 @@
       reset();
     }
   });
-  document.addEventListener("keyup", (e) => { if (isTapKey(e)) e.preventDefault(); });
+  document.addEventListener("keyup", (e) => { if (e.target !== customInput && isTapKey(e)) e.preventDefault(); });
 
   pauseBtn.addEventListener("click", () => { pauseBtn.blur(); if (state === "recording") pause("manual"); });
   endBtn.addEventListener("click", () => { endBtn.blur(); if (state === "recording" || state === "paused") finish("stop"); });
