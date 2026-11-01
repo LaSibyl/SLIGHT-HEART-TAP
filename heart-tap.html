@@ -115,6 +115,27 @@
   tr.seg-start td { border-top: 2px solid var(--line); }
   .empty { color: var(--muted); padding: 14px 12px; }
 
+  .chart-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 8px 8px; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .chart-wrap .grid { stroke: var(--line); stroke-width: 1; }
+  .chart-wrap .axis-t { fill: var(--muted); font-size: 12px; font-family: inherit; }
+  .chart-wrap .seg-t { fill: var(--muted); font-size: 11px; font-family: inherit; }
+  .chart-wrap .band { fill: var(--bg); }
+  .chart-wrap .band-good { fill: var(--ok-soft); }
+  .chart-wrap .band-bad { fill: var(--pulse-soft); }
+  .chart-wrap .line { fill: none; stroke: var(--pulse); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .chart-wrap .avg { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 5 4; opacity: 0.55; }
+  .chart-wrap .avg-t { fill: var(--ink); font-size: 11px; font-family: inherit; opacity: 0.75; }
+  .chart-wrap .pt { fill: var(--pulse); stroke: var(--surface); stroke-width: 1.5; cursor: pointer; }
+  .chart-wrap .pt-del { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; cursor: pointer; }
+  .chart-wrap .pt.sel, .chart-wrap .pt-del.sel { stroke: var(--warn); stroke-width: 3; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 0.85rem; padding: 6px 8px 2px; }
+  .chart-legend i { display: inline-block; vertical-align: middle; margin-right: 5px; }
+  .lg-pt { width: 9px; height: 9px; border-radius: 50%; background: var(--pulse); }
+  .lg-del { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--muted); }
+  .lg-avg { width: 18px; border-top: 1px dashed var(--ink); opacity: 0.6; }
+  tr.hl td { background: var(--warn-soft); }
+
   @media (prefers-reduced-motion: reduce) { .dot, .dot.hit { transition: none; transform: none; } }
 </style>
 </head>
@@ -162,6 +183,19 @@
       </div>
     </div>
   </div>
+
+  <section class="block">
+    <h2>瞬时心率</h2>
+    <div class="chart-wrap">
+      <div id="chart"><div class="empty-note" style="padding: 8px;">暂停或结束后，这里会显示每一下的瞬时心率。</div></div>
+      <div class="chart-legend">
+        <span><i class="lg-pt"></i>有效的一下</span>
+        <span><i class="lg-del"></i>已删去</span>
+        <span><i class="lg-avg"></i>该段平均心率</span>
+        <span>点一下某个点，可以在下方表格中定位</span>
+      </div>
+    </div>
+  </section>
 
   <section class="block">
     <h2>分段</h2>
@@ -282,8 +316,114 @@
   }
 
   // ================= 分段列表 =================
+  // ================= 瞬时心率图 =================
+  // 纵轴：瞬时心率 = 60000 ÷ 间隔（毫秒）；横轴：从第一下开始的时间（秒）
+  const chartBox = $("chart");
+  let chartTaps = new Map();
+  const CHART_NOTE = (t) => '<div class="empty-note" style="padding: 8px;">' + t + "</div>";
+
+  function niceStep(span, maxTicks, steps) {
+    return steps.find((s) => span / s <= maxTicks) || steps[steps.length - 1];
+  }
+
+  function renderChart() {
+    if (state === "idle" || !segments.length) { chartBox.innerHTML = CHART_NOTE("暂停或结束后，这里会显示每一下的瞬时心率。"); return; }
+    if (state === "recording") { chartBox.innerHTML = CHART_NOTE("记录中不显示图表，以免影响你按的节奏。暂停或结束后显示。"); return; }
+
+    // 收集点：每个间隔画在它结束的那一下的时间上
+    const pts = [];
+    chartTaps = new Map();
+    segments.forEach((seg, si) => {
+      for (let i = 1; i < seg.taps.length; i++) {
+        const a = seg.taps[i - 1], b = seg.taps[i], ms = b.t - a.t;
+        pts.push({ x: (b.t - recStart) / 1000, y: 60000 / ms, ms, si, deleted: a.deleted || b.deleted, tap: b });
+        chartTaps.set(b.n, b);
+      }
+    });
+    if (!pts.length) { chartBox.innerHTML = CHART_NOTE("按键太少，还画不出来（每段至少需要 2 下）。"); return; }
+
+    // 纵轴范围按有效点决定，已删去的极端点贴边显示，不会把整张图压扁
+    const keptPts = pts.filter((p) => !p.deleted);
+    const ys = (keptPts.length ? keptPts : pts).map((p) => p.y);
+    let lo = Math.floor((Math.min(...ys) - 5) / 5) * 5;
+    let hi = Math.ceil((Math.max(...ys) + 5) / 5) * 5;
+    if (hi - lo < 20) { const mid = (hi + lo) / 2; lo = Math.floor((mid - 10) / 5) * 5; hi = lo + 20; }
+    lo = Math.max(0, lo);
+
+    const lastT = Math.max(...segments.map((s) => (s.taps[s.taps.length - 1].t - recStart) / 1000));
+    const xMax = Math.max(5, Math.ceil(lastT / 5) * 5);
+
+    const W = 680, H = 280, L = 46, R = 14, T = 22, B = 38;
+    const sx = (x) => L + (x / xMax) * (W - L - R);
+    const sy = (y) => T + ((hi - Math.min(hi, Math.max(lo, y))) / (hi - lo)) * (H - T - B);
+    const f1 = (v) => v.toFixed(1);
+    let svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="瞬时心率随时间变化">';
+
+    // 分段底色（按标记着色）
+    segments.forEach((seg, si) => {
+      if (seg.taps.length < 2) return;
+      const x1 = sx((seg.taps[0].t - recStart) / 1000), x2 = sx((seg.taps[seg.taps.length - 1].t - recStart) / 1000);
+      const cls = seg.label === "good" ? "band-good" : seg.label === "bad" ? "band-bad" : "band";
+      svg += '<rect class="' + cls + '" x="' + f1(x1) + '" y="' + T + '" width="' + f1(Math.max(1, x2 - x1)) + '" height="' + (H - T - B) + '"/>';
+      if (x2 - x1 > 34) svg += '<text class="seg-t" x="' + f1(x1 + 4) + '" y="' + (T - 7) + '">第 ' + (si + 1) + " 段</text>";
+    });
+
+    // 网格和刻度
+    const yStep = niceStep(hi - lo, 6, [5, 10, 20, 25, 50]);
+    for (let v = Math.ceil(lo / yStep) * yStep; v <= hi; v += yStep) {
+      svg += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + f1(sy(v)) + '" y2="' + f1(sy(v)) + '"/>';
+      svg += '<text class="axis-t" x="' + (L - 8) + '" y="' + f1(sy(v) + 4) + '" text-anchor="end">' + v + "</text>";
+    }
+    const xStep = niceStep(xMax, 10, [5, 10, 15, 20, 30, 60]);
+    for (let v = 0; v <= xMax; v += xStep) {
+      svg += '<text class="axis-t" x="' + f1(sx(v)) + '" y="' + (H - B + 18) + '" text-anchor="middle">' + v + "</text>";
+    }
+    svg += '<text class="axis-t" x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end">时间（秒）</text>';
+    svg += '<text class="axis-t" x="4" y="' + (T - 7) + '">次/分</text>';
+
+    // 每段平均心率（虚线）
+    segments.forEach((seg) => {
+      const bpm = segBpm(seg);
+      if (!bpm) return;
+      const k = kept(seg);
+      const x1 = sx((k[0].t - recStart) / 1000), x2 = sx((k[k.length - 1].t - recStart) / 1000), y = sy(bpm);
+      svg += '<line class="avg" x1="' + f1(x1) + '" x2="' + f1(x2) + '" y1="' + f1(y) + '" y2="' + f1(y) + '"/>';
+      if (x2 - x1 > 60) svg += '<text class="avg-t" x="' + f1(x2 - 2) + '" y="' + f1(y - 5) + '" text-anchor="end">' + bpm.toFixed(1) + "</text>";
+    });
+
+    // 折线：只连同一段里的有效点，暂停处断开
+    segments.forEach((seg, si) => {
+      const segPts = pts.filter((p) => p.si === si && !p.deleted);
+      if (segPts.length < 2) return;
+      svg += '<polyline class="line" points="' + segPts.map((p) => f1(sx(p.x)) + "," + f1(sy(p.y))).join(" ") + '"/>';
+    });
+
+    // 点
+    pts.forEach((p) => {
+      const tip = "第 " + p.tap.n + " 下 · " + p.x.toFixed(2) + " 秒\n" + p.y.toFixed(1) + " 次/分（间隔 " + Math.round(p.ms) + " ms）" + (p.deleted ? "\n已删去" : "");
+      svg += '<circle class="' + (p.deleted ? "pt-del" : "pt") + '" data-n="' + p.tap.n + '" cx="' + f1(sx(p.x)) + '" cy="' + f1(sy(p.y)) + '" r="' + (p.deleted ? 4 : 3.5) + '"><title>' + tip + "</title></circle>";
+    });
+
+    svg += "</svg>";
+    chartBox.innerHTML = svg;
+  }
+
+  // 点击图上的点 → 高亮表格里对应的那一行
+  chartBox.addEventListener("click", (e) => {
+    const c = e.target.closest("[data-n]");
+    if (!c) return;
+    const tap = chartTaps.get(Number(c.dataset.n));
+    if (!tap || !tap.tr) return;
+    rows.querySelectorAll("tr.hl").forEach((r) => r.classList.remove("hl"));
+    chartBox.querySelectorAll(".sel").forEach((x) => x.classList.remove("sel"));
+    tap.tr.classList.add("hl");
+    c.classList.add("sel");
+    tap.tr.scrollIntoView({ block: "nearest" });
+  });
+
   const END_TEXT = { auto: "自动暂停", manual: "手动暂停", target: "到达时长", stop: "手动结束", "": "记录中" };
   function renderSegments() {
+    renderChart();
     if (!segments.length) return;
     segsBox.innerHTML = "";
     segments.forEach((seg, i) => {
@@ -473,6 +613,7 @@
     segsBox.innerHTML = '<div class="empty-note">每次暂停都会把记录分成新的一段。暂停或结束后，可以把某一段标为“好”或“乱”。</div>';
     durBtns.forEach((b) => (b.disabled = false));
     updateHint();
+    renderChart();
     document.title = "心率点按记录";
   }
 
